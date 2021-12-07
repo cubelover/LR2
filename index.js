@@ -4,14 +4,15 @@ const axios = require('axios');
 const http = require('http');
 const sqlite3 = require('sqlite3');
 const bluebird = require('bluebird');
-const parser = require('fast-xml-parser');
+const { XMLParser } = require('fast-xml-parser');
 const rawBody = require('raw-body');
 
-const accuracy = require('./accuracy');
+const accuracy = require('./accuracy.json');
 
 const app = express();
 const upload = multer({ dest: 'upload' });
 const inst = axios.create({ httpAgent: new http.Agent({ keepAlive: true }) });
+const parser = new XMLParser();
 
 function toObject(rows) {
   const res = {};
@@ -59,17 +60,21 @@ app.post('/score/', async (req, res) => {
     const id = +await rawBody(req);
     const scores = await inst.get(`http://www.dream-pro.info/~lavalse/LR2IR/2/getplayerxml.cgi?id=${id}`).then(({ data }) => parser.parse(data).scorelist.score);
     const result = [];
-    for (const { hash, notes, pg, gr } of scores) if (hash in accuracy) {
-      const [diff, title, cut] = accuracy[hash];
-      const score = (pg + gr / 2 + 1.92072941) / (notes + 3.84145882);
-      L = 0;
-      R = 1000;
-      while (L < R) {
-        M = L + R >> 1;
-        if (cut[M] > score) R = M;
-        else L = M + 1;
+    for (const {
+      hash, notes, pg, gr,
+    } of scores) {
+      if (hash in accuracy) {
+        const [diff, title, cut] = accuracy[hash];
+        const score = (pg + gr / 2 + 1.92072941) / (notes + 3.84145882);
+        let L = 0;
+        let R = 1000;
+        while (L < R) {
+          const M = L + R >> 1;
+          if (cut[M] > score) R = M;
+          else L = M + 1;
+        }
+        result.push([hash, diff, title, `${pg + pg + gr}/${notes * 2} (${(100 * (pg + pg + gr) / (notes * 2)).toFixed(2)}%)`, L]);
       }
-      result.push([hash, diff, title, `${pg + pg + gr}/${notes * 2} (${(100 * (pg + pg + gr) / (notes * 2)).toFixed(2)}%)`, L]);
     }
     result.sort(([,,,, u], [,,,, v]) => v - u);
     res.send(result);
