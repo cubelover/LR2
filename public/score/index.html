@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>LR2</title>
+<style>
+table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 1px solid;
+  padding: 4px;
+}
+</style>
+</head>
+<body>
+<p>
+LR2ID
+<input type="number" id="id">
+<button id="score">Score</button>
+</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Level</th>
+<th>Title</th>
+<th>Score</th>
+<th>Eval</th>
+</tr>
+</thead>
+<tbody id="result"></tbody>
+</table>
+<script>
+score.onclick = async () => {
+  const $ = document;
+  score.disabled = true;
+  try {
+    const ret = await fetch('', {
+      method: 'POST',
+      body: `${id.value}`,
+    }).then(res => res.json());
+    result.innerHTML = '';
+    function createTd(text) {
+      const td = $.createElement('td');
+      td.textContent = text;
+      return td;
+    }
+    let i = 1;
+    for (const [hash, diff, title, score, eval] of ret) {
+      const tr = $.createElement('tr');
+      const td = $.createElement('td');
+      const a = $.createElement('a');
+      a.href = `http://www.dream-pro.info/~lavalse/LR2IR/search.cgi?mode=ranking&bmsmd5=${hash}`;
+      a.textContent = title;
+      td.appendChild(a);
+      tr.appendChild(createTd(i++));
+      tr.appendChild(createTd(diff));
+      tr.appendChild(td);
+      tr.appendChild(createTd(score));
+      tr.appendChild(createTd(eval));
+      result.appendChild(tr);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error');
+  }
+  score.disabled = false;
+};
+</script>
+</form>
+</body>
+</html>

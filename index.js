@@ -5,6 +5,9 @@ const http = require('http');
 const sqlite3 = require('sqlite3');
 const bluebird = require('bluebird');
 const parser = require('fast-xml-parser');
+const rawBody = require('raw-body');
+
+const accuracy = require('./accuracy');
 
 const app = express();
 const upload = multer({ dest: 'upload' });
@@ -25,7 +28,7 @@ function toObject(rows) {
   return res;
 }
 
-app.post('/', upload.single('db'), async (req, res) => {
+app.post('/compare/', upload.single('db'), async (req, res) => {
   try {
     const db = bluebird.promisifyAll(new sqlite3.Database(req.file.path));
     try {
@@ -46,6 +49,30 @@ app.post('/', upload.single('db'), async (req, res) => {
       res.sendStatus(400);
     }
     await db.closeAsync();
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(400);
+  }
+});
+app.post('/score/', async (req, res) => {
+  try {
+    const id = +await rawBody(req);
+    const scores = await inst.get(`http://www.dream-pro.info/~lavalse/LR2IR/2/getplayerxml.cgi?id=${id}`).then(({ data }) => parser.parse(data).scorelist.score);
+    const result = [];
+    for (const { hash, notes, pg, gr } of scores) if (hash in accuracy) {
+      const [diff, title, cut] = accuracy[hash];
+      const score = (pg + gr / 2 + 1.92072941) / (notes + 3.84145882);
+      L = 0;
+      R = 1000;
+      while (L < R) {
+        M = L + R >> 1;
+        if (cut[M] > score) R = M;
+        else L = M + 1;
+      }
+      result.push([hash, diff, title, `${pg + pg + gr}/${notes * 2} (${(100 * (pg + pg + gr) / (notes * 2)).toFixed(2)}%)`, L]);
+    }
+    result.sort(([,,,, u], [,,,, v]) => v - u);
+    res.send(result);
   } catch (err) {
     console.error(err);
     res.sendStatus(400);

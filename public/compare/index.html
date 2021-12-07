@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>LR2</title>
+<style>
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+td, th {
+  text-align: center;
+  border: 1px solid;
+}
+div {
+  position: relative;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+<p>
+LR2beta3/LR2files/Database/Score/*.db:
+<input type="file" id="db" accept=".db">
+<button id="compare">Compare</button>
+</p>
+<div>
+<table>
+<thead>
+<tr>
+<th rowspan="2" width="20%"></th>
+<th colspan="4">Local</th>
+<th colspan="4">Global</th>
+</tr>
+<tr>
+<th width="10%">Clear</th>
+<th width="10%">EX</th>
+<th width="10%">Combo</th>
+<th width="10%">BP</th>
+<th width="10%">Clear</th>
+<th width="10%">EX</th>
+<th width="10%">Combo</th>
+<th width="10%">BP</th>
+</tr>
+</thead>
+<tbody id="diff"></tbody>
+</table>
+</div>
+<script>
+compare.onclick = async () => {
+  const $ = document;
+  const [file] = db.files;
+  if (!file) return;
+  compare.disabled = true;
+  try {
+    const fd = new FormData();
+    console.log(file);
+    fd.append('db', file);
+    const ret = await fetch('', {
+      method: 'POST',
+      body: fd,
+    }).then(res => res.json());
+    diff.innerHTML = '';
+    function createTd(text) {
+      const td = $.createElement('td');
+      td.textContent = text;
+      return td;
+    }
+    const clear = { 0: 'NOPLAY', 1: 'FAILED', 2: 'EASY', 3: 'NORMAL', 4: 'HARD', 5: 'FULLCOMBO', 21: '★FULLCOMBO' };
+    for (const row of ret) {
+      const tr = $.createElement('tr');
+      const td = $.createElement('td');
+      const a = $.createElement('a');
+      a.href = `http://www.dream-pro.info/~lavalse/LR2IR/search.cgi?mode=ranking&bmsmd5=${row[0]}`;
+      a.textContent = `${row[0].substring(0, 16)}`;
+      td.appendChild(a);
+      tr.appendChild(td);
+      tr.appendChild(createTd(clear[row[1]]));
+      tr.appendChild(createTd(row[2]));
+      tr.appendChild(createTd(row[3]));
+      tr.appendChild(createTd(row[4]));
+      tr.appendChild(createTd(clear[row[5]]));
+      tr.appendChild(createTd(row[6]));
+      tr.appendChild(createTd(row[7]));
+      tr.appendChild(createTd(row[8]));
+      diff.appendChild(tr);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error');
+  }
+  compare.disabled = false;
+};
+</script>
+</form>
+</body>
+</html>
